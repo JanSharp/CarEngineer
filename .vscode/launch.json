@@ -7,7 +7,7 @@
     {
       "type": "factoriomod",
       "request": "launch",
-      "name": "EmptyMod debug Jan#1",
+      "name": "CarEngineer debug Jan#1",
       "factorioPath": "C:/Portable/Factorio/Modding/bin/x64/factorio.exe",
       "allowDisableBaseMod": true,
       "factorioArgs": [
@@ -20,7 +20,7 @@
         "JanSharpDevEnv": true,
         "WiderNoticeTextBoxes": true,
 
-        "EmptyMod": true,
+        "CarEngineer": true,
       },
 
       // "hookSettings": true,
@@ -31,7 +31,7 @@
       "type": "factoriomod",
       "request": "launch",
       "hookMode": "profile",
-      "name": "EmptyMod profile Jan#1",
+      "name": "CarEngineer profile Jan#1",
       "factorioPath": "C:/Portable/Factorio/Modding/bin/x64/factorio.exe",
       "allowDisableBaseMod": true,
       "factorioArgs": [
@@ -44,7 +44,7 @@
         "JanSharpDevEnv": true,
         "WiderNoticeTextBoxes": true,
 
-        "EmptyMod": true,
+        "CarEngineer": true,
       },
 
       // "hookSettings": true,
