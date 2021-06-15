@@ -6,10 +6,12 @@
 ---@field next_updates table<integer, PlayerData[]> @ indexed by game tick
 ---@field cars_to_heal table<integer, PlayerData> @ indexed by unit_number
 ---@field cars_in_combat_until table<integer, PlayerData> @ indexed by tick at which they leave combat
+---@field players_repairing_stuff table<integer, PlayerData> @ indexed by player_index
 ---@field wood_proto LuaItemPrototype @ cached wood item prototype
 ---@field car_max_energy_usage integer @ cached car entity prototype max energy usage
 
 ---@class PlayerData
+---@field player_index integer
 ---@field player LuaPlayer
 ---@field car LuaEntity|nil @ `nil` if the player is not a a character controller
 ---@field car_unit_number integer|nil @ `nil` if the player is not a a character controller
@@ -18,6 +20,7 @@
 ---@field car_fuel_inv LuaInventory|nil @ `car.get_fuel_inventory()`
 ---@field next_update_tick integer|nil @ index used for `next_updates`
 ---@field in_combat_until integer|nil @ tick at which this car leaves combat
+---@field repair_state LuaControl.repair_state @ the current repair state when using repair packs
 
 ---in ticks
 local shortest_update_delay = 10
@@ -29,6 +32,8 @@ local car_lut
 local next_updates
 local cars_to_heal
 local cars_in_combat_until
+
+local players_repairing_stuff
 
 local wood_proto
 local car_max_energy_usage
@@ -49,12 +54,14 @@ script.on_init(function()
   next_updates = {}
   cars_to_heal = {}
   cars_in_combat_until = {}
+  players_repairing_stuff = {}
   script_data = {
     version = "1.1.0",
     players = players,
     car_lut = car_lut,
     cars_to_heal = cars_to_heal,
     cars_in_combat_until = cars_in_combat_until,
+    players_repairing_stuff = players_repairing_stuff,
     next_updates = next_updates, ---@diagnostic disable-line: no-implicit-any
   }
   init()
@@ -75,6 +82,7 @@ script.on_load(function()
     cars_in_combat_until = script_data.cars_in_combat_until
     wood_proto = script_data.wood_proto
     car_max_energy_usage = script_data.car_max_energy_usage
+    players_repairing_stuff = script_data.players_repairing_stuff
   end
 end)
 
@@ -165,6 +173,7 @@ local function remove_car_data(player_data)
       end
     end
   end
+  players_repairing_stuff[player_data.player_index] = nil
   player_data.car_unit_number = nil
   player_data.car = nil
   player_data.is_auto_refueling = nil
@@ -317,6 +326,10 @@ script.on_event(defines.events.on_tick, function(event)
       cars_in_combat_until[tick] = nil
     end
   end
+
+  for _, player_data in next, players_repairing_stuff do
+    player_data.player.repair_state = player_data.repair_state
+  end
 end)
 
 script.on_nth_tick(7, function()
@@ -330,13 +343,33 @@ script.on_nth_tick(7, function()
   end
 end)
 
+---@param player_data PlayerData
+local function check_is_repairing(player_data)
+  local player = player_data.player
+  local cursor_stack = player.cursor_stack
+  if cursor_stack.valid_for_read and cursor_stack.type == "repair-tool" then
+    local selected = player.selected
+    if selected then
+      player_data.repair_state.position = selected.position
+      players_repairing_stuff[player_data.player_index] = player_data
+      return
+    end
+  end
+  players_repairing_stuff[player_data.player_index] = nil
+end
+
 ---@param player LuaPlayer
 function init_player(player)
   local player_data = {
     player = player,
+    player_index = player.index,
+    repair_state = {repairing = true},
   }
   if player.controller_type == defines.controllers.character then
     enter_car_mode(player_data)
+    if player_data.car then
+      check_is_repairing(player_data)
+    end
   end
   players[player.index] = player_data
 end
@@ -403,6 +436,18 @@ script.on_event(defines.events.on_player_used_capsule, function(event)
     end
   end
 end)
+
+local function handle_repairing_events(event)
+  local player_data = players[event.player_index]
+  if player_data and player_data.car then
+    check_is_repairing(player_data)
+  end
+end
+
+script.on_event({
+  defines.events.on_selected_entity_changed,
+  defines.events.on_player_cursor_stack_changed
+}, handle_repairing_events)
 
 script.on_event({
   defines.events.on_player_toggled_map_editor,
