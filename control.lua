@@ -298,9 +298,11 @@ end
 ---@param player_data PlayerData
 local function leave_car_mode(player_data)
   local car = player_data.car
-  remove_car_data(player_data)
-  if car.valid then
-    car.destroy{raise_destroy = true}
+  if car then
+    remove_car_data(player_data)
+    if car.valid then
+      car.destroy{raise_destroy = true}
+    end
   end
 end
 
