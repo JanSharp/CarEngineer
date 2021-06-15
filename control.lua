@@ -125,7 +125,11 @@ end
 ---@param player_data PlayerData
 local function car_died(player_data)
   remove_car_data(player_data)
-  player_data.player.character.die()
+  if player_data.player.controller_type == defines.controllers.character then
+    -- the player could be in any character because of mods, but
+    -- it could also be a ghost because the player also died before this function ran
+    player_data.player.character.die()
+  end
 end
 
 ---@param player_data PlayerData
