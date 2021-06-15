@@ -80,7 +80,7 @@ end)
 
 local update_fuel
 
-script.on_configuration_changed(function(e)
+script.on_configuration_changed(function()
   -- on config changed can run before on_init
   if script_data then -- TODO: uh, idk why i needed to add this, pls check?
     init()
