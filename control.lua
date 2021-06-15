@@ -360,6 +360,7 @@ script.on_event(defines.events.on_player_driving_changed_state, function(event)
   end
 end)
 
+---@param event table
 local function on_death(event)
   ---@type integer
   local unit_number = event.unit_number or event.entity.unit_number or error("Unable to get unit_number.")
