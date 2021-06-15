@@ -4,6 +4,8 @@
 ---@field players table<integer, PlayerData> @ indexed by player index
 ---@field car_lut table<integer, PlayerData> @ indexed by car unit_number
 ---@field next_updates table<integer, PlayerData[]> @ indexed by game tick
+---@field cars_to_heal table<integer, PlayerData> @ indexed by unit_number
+---@field cars_in_combat_until table<integer, PlayerData> @ indexed by tick at which they leave combat
 ---@field wood_proto LuaItemPrototype @ cached wood item prototype
 ---@field car_max_energy_usage integer @ cached car entity prototype max energy usage
 
@@ -15,6 +17,7 @@
 ---@field car_burner LuaBurner|nil @ `car.burner`
 ---@field car_fuel_inv LuaInventory|nil @ `car.get_fuel_inventory()`
 ---@field next_update_tick integer|nil @ index used for `next_updates`
+---@field in_combat_until integer|nil @ tick at which this car leaves combat
 
 ---in ticks
 local shortest_update_delay = 10
@@ -24,6 +27,8 @@ local players
 local car_lut
 
 local next_updates
+local cars_to_heal
+local cars_in_combat_until
 
 local wood_proto
 local car_max_energy_usage
@@ -42,10 +47,14 @@ script.on_init(function()
   players = {}
   car_lut = {}
   next_updates = {}
+  cars_to_heal = {}
+  cars_in_combat_until = {}
   script_data = {
     version = "1.1.0",
     players = players,
     car_lut = car_lut,
+    cars_to_heal = cars_to_heal,
+    cars_in_combat_until = cars_in_combat_until,
     next_updates = next_updates, ---@diagnostic disable-line: no-implicit-any
   }
   init()
@@ -62,6 +71,8 @@ script.on_load(function()
     players = script_data.players
     car_lut = script_data.car_lut
     next_updates = script_data.next_updates
+    cars_to_heal = script_data.cars_to_heal
+    cars_in_combat_until = script_data.cars_in_combat_until
     wood_proto = script_data.wood_proto
     car_max_energy_usage = script_data.car_max_energy_usage
   end
@@ -69,7 +80,7 @@ end)
 
 local update_fuel
 
-script.on_configuration_changed(function()
+script.on_configuration_changed(function(e)
   -- on config changed can run before on_init
   if script_data then -- TODO: uh, idk why i needed to add this, pls check?
     init()
@@ -99,9 +110,45 @@ local function create_car(surface, position, force)
   return car
 end
 
+---since the full health state doesn't requrie any work
+---this can also be used to clean up data
+---@param player_data PlayerData
+local function set_combat_state_full_health(player_data)
+  cars_to_heal[player_data.car_unit_number] = nil
+  if player_data.in_combat_until then
+    cars_in_combat_until[player_data.in_combat_until] = nil
+    player_data.in_combat_until = nil
+  end
+end
+
+---@param player_data PlayerData
+local function set_combat_state_healing(player_data)
+  if player_data.car.get_health_ratio() == 1 then
+    set_combat_state_full_health(player_data)
+  else
+    cars_to_heal[player_data.car_unit_number] = player_data
+    if player_data.in_combat_until then
+      cars_in_combat_until[player_data.in_combat_until] = nil
+      player_data.in_combat_until = nil
+    end
+  end
+end
+
+---@param player_data PlayerData
+local function set_combat_state_in_combat(player_data)
+  cars_to_heal[player_data.car_unit_number] = nil
+  local in_combat_until = game.tick + 600
+  while cars_in_combat_until[in_combat_until] do
+    in_combat_until = in_combat_until + 1
+  end
+  cars_in_combat_until[in_combat_until] = player_data
+  player_data.in_combat_until = in_combat_until
+end
+
 ---@param player_data PlayerData
 local function remove_car_data(player_data)
   car_lut[player_data.car_unit_number] = nil
+  set_combat_state_full_health(player_data)
   local next_update_tick = player_data.next_update_tick
   local to_update = next_updates[next_update_tick]
   local c = #to_update
@@ -250,12 +297,33 @@ end
 
 script.on_event(defines.events.on_tick, function(event)
   local tick = event.tick
-  local to_update = next_updates[tick]
-  if to_update then
-    for _, player_data in next, to_update do
-      update_fuel(player_data)
+  do
+    local to_update = next_updates[tick]
+    if to_update then
+      for _, player_data in next, to_update do
+        update_fuel(player_data)
+      end
+      next_updates[tick] = nil
     end
-    next_updates[tick] = nil
+  end
+
+  do
+    local player_data = cars_in_combat_until[tick]
+    if player_data then
+      set_combat_state_healing(player_data)
+      cars_in_combat_until[tick] = nil
+    end
+  end
+end)
+
+script.on_nth_tick(7, function()
+  for _, player_data in next, cars_to_heal do
+    local car = player_data.car
+    if car.get_health_ratio() == 1 then
+      set_combat_state_full_health(player_data)
+    else
+      car.health = car.health + 1
+    end
   end
 end)
 
@@ -312,6 +380,14 @@ local function handle_switch_event(event)
     check_switch_mode(player_data)
   end
 end
+
+script.on_event(defines.events.on_entity_damaged, function(event)
+  local unit_number = event.entity.unit_number
+  local player_data = car_lut[unit_number]
+  if player_data then
+    set_combat_state_in_combat(player_data)
+  end
+end, filters)
 
 script.on_event({
   defines.events.on_player_toggled_map_editor,
