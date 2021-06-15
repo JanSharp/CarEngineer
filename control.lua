@@ -393,6 +393,17 @@ script.on_event(defines.events.on_entity_damaged, function(event)
   end
 end, filters)
 
+script.on_event(defines.events.on_player_used_capsule, function(event)
+  local player_data = players[event.player_index]
+  if player_data and event.item.name == "raw-fish" and check_car_validity(player_data) then
+    local car = player_data.car
+    car.health = car.health + 80
+    if car.get_health_ratio() == 1 then
+      set_combat_state_full_health(player_data)
+    end
+  end
+end)
+
 script.on_event({
   defines.events.on_player_toggled_map_editor,
   defines.events.on_cutscene_waypoint_reached,
