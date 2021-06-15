@@ -136,6 +136,9 @@ end
 
 ---@param player_data PlayerData
 local function set_combat_state_in_combat(player_data)
+  if player_data.in_combat_until then
+    cars_in_combat_until[player_data.in_combat_until] = nil
+  end
   cars_to_heal[player_data.car_unit_number] = nil
   local in_combat_until = game.tick + 600
   while cars_in_combat_until[in_combat_until] do
