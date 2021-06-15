@@ -46,7 +46,7 @@ script.on_init(function()
     version = "1.1.0",
     players = players,
     car_lut = car_lut,
-    next_updates = next_updates,
+    next_updates = next_updates, ---@diagnostic disable-line: no-implicit-any
   }
   init()
   global.script_data = script_data
