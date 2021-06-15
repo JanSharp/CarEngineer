@@ -36,6 +36,8 @@ local function init()
   script_data.car_max_energy_usage = car_max_energy_usage
 end
 
+local init_player
+
 script.on_init(function()
   players = {}
   car_lut = {}
@@ -48,10 +50,14 @@ script.on_init(function()
   }
   init()
   global.script_data = script_data
+
+  for _, player in pairs(game.players) do
+    init_player(player)
+  end
 end)
 
 script.on_load(function()
-  if global.version == "1.1.0" then
+  if global.script_data and global.script_data.version == "1.1.0" then
     script_data = global.script_data
     players = script_data.players
     car_lut = script_data.car_lut
@@ -64,11 +70,13 @@ end)
 local update_fuel
 
 script.on_configuration_changed(function()
-  init()
-  next_updates = {}
-  script_data.next_updates = next_updates
-  for _, player_data in next, players do
-    update_fuel(player_data)
+  if script_data then -- on config changed can run before on_init
+    init()
+    next_updates = {}
+    script_data.next_updates = next_updates
+    for _, player_data in next, players do
+      update_fuel(player_data)
+    end
   end
 end)
 
@@ -246,16 +254,21 @@ script.on_event(defines.events.on_tick, function(event)
   end
 end)
 
-script.on_event(defines.events.on_player_created, function(event)
-  local player = game.get_player(event.player_index)
-  player.toggle_map_editor() -- HACK: just for testing
+---@param player LuaPlayer
+function init_player(player)
   local player_data = {
     player = player,
   }
   if player.controller_type == defines.controllers.character then
     enter_car_mode(player_data)
   end
-  players[event.player_index] = player_data
+  players[player.index] = player_data
+end
+
+script.on_event(defines.events.on_player_created, function(event)
+  local player = game.get_player(event.player_index)
+  player.toggle_map_editor() -- HACK: just for testing
+  init_player(player)
 end)
 
 script.on_event(defines.events.on_player_respawned, function(event)
