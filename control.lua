@@ -1,6 +1,6 @@
 
 ---@class ScriptData
----@field version '"1.0.0"' @ used for migration
+---@field version '"1.1.0"' @ used for migration
 ---@field players table<integer, PlayerData> @ indexed by player index
 ---@field car_lut table<integer, PlayerData> @ indexed by car unit_number
 ---@field next_updates table<integer, PlayerData[]> @ indexed by game tick
