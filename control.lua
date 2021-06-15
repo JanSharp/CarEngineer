@@ -16,6 +16,7 @@
 ---@field car LuaEntity|nil @ `nil` if the player is not a a character controller
 ---@field car_unit_number integer|nil @ `nil` if the player is not a a character controller
 ---@field is_auto_refueling boolean|nil @ is the current fuel fake fuel?
+---@field fuel_icon_id integer|nil @ the id of the out of fuel icon. always present when `is_auto_refueling` is `true`
 ---@field car_burner LuaBurner|nil @ `car.burner`
 ---@field car_fuel_inv LuaInventory|nil @ `car.get_fuel_inventory()`
 ---@field next_update_tick integer|nil @ index used for `next_updates`
@@ -242,6 +243,14 @@ function update_fuel(player_data)
       if remaining == 0 then
         if is_empty then
           player_data.is_auto_refueling = true
+          player_data.fuel_icon_id = rendering.draw_sprite{
+            sprite = "utility/fuel_icon",
+            target = car,
+            surface = car.surface,
+            x_scale = 0.5,
+            y_scale = 0.5,
+            target_offset = car.prototype.alert_icon_shift,
+          }
           car.friction_modifier = 16
           burner.currently_burning = wood_proto
           do_auto_refuel()
@@ -251,6 +260,7 @@ function update_fuel(player_data)
       else
         if player_data.is_auto_refueling then
           player_data.is_auto_refueling = nil
+          rendering.destroy(player_data.fuel_icon_id)
           car.friction_modifier = 1
         end
         local remaining_fuel_ticks = remaining / car_max_energy_usage
