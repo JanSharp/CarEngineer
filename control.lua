@@ -170,13 +170,17 @@ function update_fuel(player_data)
       if remaining == 0 then
         if is_empty then
           player_data.is_auto_refueling = true
+          car.friction_modifier = 16
           burner.currently_burning = wood_proto
           do_auto_refuel()
         else
           update_at(game.tick + 1)
         end
       else
-        player_data.is_auto_refueling = nil
+        if player_data.is_auto_refueling then
+          player_data.is_auto_refueling = nil
+          car.friction_modifier = 1
+        end
         local remaining_fuel_ticks = remaining / car_max_energy_usage
         local next_update_tick = game.tick + math.ceil(remaining_fuel_ticks)
         update_at(next_update_tick)
