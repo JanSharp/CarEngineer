@@ -70,7 +70,8 @@ end)
 local update_fuel
 
 script.on_configuration_changed(function()
-  if script_data then -- on config changed can run before on_init
+  -- on config changed can run before on_init
+  if script_data then -- TODO: uh, idk why i needed to add this, pls check?
     init()
     next_updates = {}
     script_data.next_updates = next_updates
