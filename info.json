@@ -4,16 +4,16 @@
   "factorio_version": "1.1",
   "title": "Car Engineer",
   "author": "JanSharp",
-  "contact": "",
-  "homepage": "",
-  "description": "???",
+  "contact": "https://github.com/JanSharp/CarEngineer/issues",
+  "homepage": "https://github.com/JanSharp/CarEngineer",
+  "description": "Factorio mod where you are stuck in a car. Forever.\nYou are the car.",
   "dependencies": [
     "base"
   ],
 
   "package": {
     "ignore": [
-      "*.xcf"
+      "graphics/*.xcf"
     ]
   }
 }
