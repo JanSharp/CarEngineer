@@ -12,6 +12,4 @@
 - Give the car natural health regen (with a delay just as if you were a character)
 - Suicide button (all kinds of variants. custom-input, shortcut (enabled via a setting), mod gui button (enabled via a setting))
 - Setting to die upon exiting the car.
-
-# Todo
-- Randomize respawn location a bit just in case the spawn location it picks actually gets you stuck
+- Setting to randomize respawn location a bit just in case the spawn location gets you stuck

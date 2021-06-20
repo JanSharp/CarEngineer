@@ -18,4 +18,12 @@ data:extend{
     setting_type = "runtime-per-user",
     default_value = false,
   },
+  {
+    type = "int-setting",
+    name = "CarEngineer-max-random-spawn-distance",
+    setting_type = "runtime-per-user",
+    default_value = 0,
+    minimum_value = 0,
+    maximum_value = 128,
+  },
 }

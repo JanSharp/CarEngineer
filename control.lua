@@ -449,6 +449,11 @@ end)
 script.on_event(defines.events.on_player_respawned, function(event)
   local player_data = players[event.player_index]
   if player_data then
+    local max_rand_distance = settings.get_player_settings(player_data.player)["CarEngineer-max-random-spawn-distance"].value
+    player_data.player.teleport(
+      math.random(-max_rand_distance, max_rand_distance),
+      math.random(-max_rand_distance, max_rand_distance)
+    )
     enter_car_mode(player_data)
   end
 end)
