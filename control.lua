@@ -99,12 +99,13 @@ local update_fuel
 
 script.on_configuration_changed(function()
   if not script_data then -- only if on_load didn't run == migrating from different version of the mod
-    load_cache()
-    script_data.next_updates = {}
-    for _, player_data in next, players do
-      update_fuel(player_data)
-    end
     on_load()
+  end
+  load_cache()
+  next_updates = {}
+  script_data.next_updates = next_updates
+  for _, player_data in next, players do
+    update_fuel(player_data)
   end
 end)
 
@@ -178,6 +179,7 @@ local function remove_car_data(player_data)
       if to_update[i] == player_data then
         to_update[i] = to_update[c]
         to_update[c] = nil
+        break
       end
     end
   end
@@ -214,7 +216,6 @@ end
 function update_fuel(player_data)
   if check_car_validity(player_data) then
     local car = player_data.car
-    local fuel_inv = car.get_fuel_inventory()
     local burner = car.burner
 
     local function do_auto_refuel()
@@ -242,7 +243,7 @@ function update_fuel(player_data)
       player_data.next_update_tick = tick
     end
 
-    local is_empty = fuel_inv.is_empty()
+    local is_empty = player_data.car_fuel_inv.is_empty()
     if is_empty and player_data.is_auto_refueling then
       do_auto_refuel()
     else
@@ -289,7 +290,7 @@ end
 local function show_mod_gui_button(player_data)
   if player_data.car
     and player_data.mod_gui_btn_enabled
-    and (not player_data.mod_gui_btn)
+    and (not (player_data.mod_gui_btn and player_data.mod_gui_btn.valid))
   then
     ---@type LuaGuiElement
     local flow = mod_gui.get_button_flow(player_data.player)
@@ -309,14 +310,14 @@ end
 ---@param player_data PlayerData
 local function hide_mod_gui_button(player_data)
   local mod_gui_btn = player_data.mod_gui_btn
-  if mod_gui_btn then
+  if mod_gui_btn and mod_gui_btn.valid then
     local flow = mod_gui_btn.parent
     mod_gui_btn.destroy()
     if not next(flow.children) then
       flow.parent.destroy()
     end
-    player_data.mod_gui_btn = nil
   end
+  player_data.mod_gui_btn = nil
 end
 
 ---@param player_data PlayerData
@@ -361,7 +362,7 @@ local function leave_car_mode(player_data)
 end
 
 ---@param player_data PlayerData
-local function check_switch_mode(player_data)
+local function update_mode(player_data)
   if player_data.car then
     if player_data.player.controller_type ~= defines.controllers.character then
       leave_car_mode(player_data)
@@ -394,7 +395,9 @@ script.on_event(defines.events.on_tick, function(event)
   end
 
   for _, player_data in next, players_repairing_stuff do
-    player_data.player.repair_state = player_data.repair_state
+    if (tick % 2) == 1 then
+      player_data.player.repair_state = player_data.repair_state
+    end
   end
 end)
 
@@ -435,6 +438,9 @@ function init_player(player)
     enter_car_mode(player_data)
     if player_data.car then
       check_is_repairing(player_data)
+      if player_data.car.get_health_ratio() ~= 1 then
+        set_combat_state_in_combat(player_data)
+      end
     end
   end
   update_mod_gui_button(player_data)
@@ -442,8 +448,7 @@ function init_player(player)
 end
 
 script.on_event(defines.events.on_player_created, function(event)
-  local player = game.get_player(event.player_index)
-  init_player(player)
+  init_player(game.get_player(event.player_index))
 end)
 
 script.on_event(defines.events.on_player_respawned, function(event)
@@ -460,12 +465,18 @@ end)
 
 ---@param player_data PlayerData
 local function suicide(player_data)
-  if player_data.car then
+  if player_data.car and check_car_validity(player_data) then
     if player_data.player.controller_type == defines.controllers.character then
       player_data.car.die(player_data.player.force, player_data.player.character)
-    else
-      player_data.car.die(player_data.player.force)
+      return
+    elseif player_data.player.controller_type == defines.controllers.cutscene then
+      local character = player_data.player.cutscene_character
+      if character then
+        player_data.car.die(player_data.player.force, player_data.player.character)
+        return
+      end
     end
+    player_data.car.die(player_data.player.force)
   end
 end
 
@@ -492,6 +503,7 @@ script.on_event(defines.events.on_lua_shortcut, function(event)
   end
 end)
 
+---@param event table
 script.on_event("CarEngineer-suicide", function(event)
   local player_data = players[event.player_index]
   if player_data then
@@ -502,10 +514,12 @@ end)
 ---@param event script_raised_destroy|on_entity_destroyed|on_entity_died
 local function on_death(event)
   ---@type integer
-  local unit_number = event.unit_number or event.entity.unit_number or error("Unable to get unit_number.")
-  local player_data = car_lut[unit_number]
-  if player_data then
-    car_died(player_data)
+  local unit_number = event.unit_number or event.entity.unit_number
+  if unit_number then
+    local player_data = car_lut[unit_number]
+    if player_data then
+      car_died(player_data)
+    end
   end
 end
 
@@ -513,14 +527,6 @@ local filters = {{filter = "name", name = "car"}}
 script.on_event(defines.events.script_raised_destroy, on_death, filters)
 script.on_event(defines.events.on_entity_destroyed, on_death)
 script.on_event(defines.events.on_entity_died, on_death, filters)
-
----@param event table
-local function handle_switch_event(event)
-  local player_data = players[event.player_index]
-  if player_data then
-    check_switch_mode(player_data)
-  end
-end
 
 script.on_event(defines.events.on_entity_damaged, function(event)
   local unit_number = event.entity.unit_number
@@ -544,7 +550,7 @@ end)
 ---@param event on_selected_entity_changed|on_player_cursor_stack_changed
 local function handle_repairing_events(event)
   local player_data = players[event.player_index]
-  if player_data and player_data.car then
+  if player_data and player_data.car and check_car_validity(player_data) then
     check_is_repairing(player_data)
   end
 end
@@ -553,6 +559,14 @@ script.on_event({
   defines.events.on_selected_entity_changed,
   defines.events.on_player_cursor_stack_changed
 }, handle_repairing_events)
+
+---@param event table
+local function handle_switch_event(event)
+  local player_data = players[event.player_index]
+  if player_data then
+    update_mode(player_data)
+  end
+end
 
 script.on_event({
   defines.events.on_player_toggled_map_editor,
