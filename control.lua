@@ -113,7 +113,7 @@ end)
 ---@param force LuaForce
 ---@return LuaEntity car
 local function create_car(surface, position, force)
-  position = surface.find_non_colliding_position("car", position, 32, 0.5) or position
+  position = surface.find_non_colliding_position("car", position, 16, 0.5) or position
   local car = surface.create_entity{
     name = "car",
     position = position,
