@@ -39,7 +39,7 @@ local players_repairing_stuff
 local wood_proto
 local car_max_energy_usage
 
-local function init()
+local function load_cache()
   wood_proto = game.item_prototypes["wood"] ---@type LuaItemPrototype
   car_max_energy_usage = game.entity_prototypes["car"].max_energy_usage
 
@@ -65,7 +65,7 @@ script.on_init(function()
     players_repairing_stuff = players_repairing_stuff,
     next_updates = next_updates, ---@diagnostic disable-line: no-implicit-any
   }
-  init()
+  load_cache()
   global.script_data = script_data
 
   for _, player in pairs(game.players) do
@@ -73,31 +73,34 @@ script.on_init(function()
   end
 end)
 
+local function on_load()
+  script_data = global.script_data
+  players = script_data.players
+  car_lut = script_data.car_lut
+  next_updates = script_data.next_updates
+  cars_to_heal = script_data.cars_to_heal
+  cars_in_combat_until = script_data.cars_in_combat_until
+  wood_proto = script_data.wood_proto
+  car_max_energy_usage = script_data.car_max_energy_usage
+  players_repairing_stuff = script_data.players_repairing_stuff
+end
+
 script.on_load(function()
   if global.script_data and global.script_data.version == "1.1.0" then
-    script_data = global.script_data
-    players = script_data.players
-    car_lut = script_data.car_lut
-    next_updates = script_data.next_updates
-    cars_to_heal = script_data.cars_to_heal
-    cars_in_combat_until = script_data.cars_in_combat_until
-    wood_proto = script_data.wood_proto
-    car_max_energy_usage = script_data.car_max_energy_usage
-    players_repairing_stuff = script_data.players_repairing_stuff
+    on_load()
   end
 end)
 
 local update_fuel
 
 script.on_configuration_changed(function()
-  -- on config changed can run before on_init
-  if script_data then -- TODO: uh, idk why i needed to add this, pls check?
-    init()
-    next_updates = {}
-    script_data.next_updates = next_updates
+  if not script_data then -- only if on_load didn't run == migrating from different version of the mod
+    load_cache()
+    script_data.next_updates = {}
     for _, player_data in next, players do
       update_fuel(player_data)
     end
+    on_load()
   end
 end)
 
