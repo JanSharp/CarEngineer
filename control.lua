@@ -395,9 +395,7 @@ script.on_event(defines.events.on_tick, function(event)
   end
 
   for _, player_data in next, players_repairing_stuff do
-    if (tick % 2) == 1 then
-      player_data.player.repair_state = player_data.repair_state
-    end
+    player_data.player.repair_state = player_data.repair_state
   end
 end)
 

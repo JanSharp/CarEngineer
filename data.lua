@@ -4,7 +4,7 @@ data:extend{
     type = "custom-input",
     name = "CarEngineer-suicide",
     localised_description = {"CarEngineer.who-knew"},
-    key_sequence = "ALT + G",
+    key_sequence = "",
     action = "lua",
   },
   {
