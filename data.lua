@@ -7,6 +7,15 @@ data:extend{
     key_sequence = "ALT + G",
     action = "lua",
   },
+  {
+    type = "sprite",
+    name = "CarEngineer-suicide-icon",
+    filename = "__CarEngineer__/graphics/suicide-x32.png",
+    priority = "extra-high-no-scale",
+    width = 32,
+    height = 32,
+    flags = {"icon"},
+  },
 }
 
 if settings.startup["CarEngineer-enable-shortcut"].value then

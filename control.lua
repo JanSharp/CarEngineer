@@ -1,4 +1,6 @@
 
+local mod_gui = require("mod-gui")
+
 ---@class ScriptData
 ---@field version '"1.1.0"' @ used for migration
 ---@field players table<integer, PlayerData> @ indexed by player index
@@ -22,6 +24,8 @@
 ---@field next_update_tick integer|nil @ index used for `next_updates`
 ---@field in_combat_until integer|nil @ tick at which this car leaves combat
 ---@field repair_state LuaControl.repair_state @ the current repair state when using repair packs
+---@field mod_gui_btn LuaGuiElement|nil
+---@field mod_gui_btn_enabled boolean|nil @ reflects the mod setting
 
 ---in ticks
 local shortest_update_delay = 10
@@ -282,6 +286,51 @@ local function get_back_in_there(player_data)
 end
 
 ---@param player_data PlayerData
+local function show_mod_gui_button(player_data)
+  if player_data.car
+    and player_data.mod_gui_btn_enabled
+    and (not player_data.mod_gui_btn)
+  then
+    ---@type LuaGuiElement
+    local flow = mod_gui.get_button_flow(player_data.player)
+    player_data.mod_gui_btn = flow.add{
+      type = "sprite-button",
+      style = mod_gui.button_style,
+      sprite = "CarEngineer-suicide-icon",
+      tags = {
+        __CarEngineer = true,
+        suicide = true,
+      },
+      tooltip = {"CarEngineer.who-knew"},
+    }
+  end
+end
+
+---@param player_data PlayerData
+local function hide_mod_gui_button(player_data)
+  local mod_gui_btn = player_data.mod_gui_btn
+  if mod_gui_btn then
+    local flow = mod_gui_btn.parent
+    mod_gui_btn.destroy()
+    if not next(flow.children) then
+      flow.parent.destroy()
+    end
+    player_data.mod_gui_btn = nil
+  end
+end
+
+---@param player_data PlayerData
+local function update_mod_gui_button(player_data)
+  if settings.get_player_settings(player_data.player)["CarEngineer-enable-mod-gui-btn"].value then
+    player_data.mod_gui_btn_enabled = true
+    show_mod_gui_button(player_data)
+  else
+    player_data.mod_gui_btn_enabled = nil
+    hide_mod_gui_button(player_data)
+  end
+end
+
+---@param player_data PlayerData
 local function enter_car_mode(player_data)
   local player = player_data.player
   local car = create_car(player.surface, player.position, player.force)
@@ -295,6 +344,7 @@ local function enter_car_mode(player_data)
   get_back_in_there(player_data)
   if player_data.car then
     update_fuel(player_data)
+    show_mod_gui_button(player_data)
   end
 end
 
@@ -306,6 +356,7 @@ local function leave_car_mode(player_data)
     if car.valid then
       car.destroy{raise_destroy = true}
     end
+    hide_mod_gui_button(player_data)
   end
 end
 
@@ -386,6 +437,7 @@ function init_player(player)
       check_is_repairing(player_data)
     end
   end
+  update_mod_gui_button(player_data)
   players[player.index] = player_data
 end
 
@@ -438,7 +490,7 @@ script.on_event("CarEngineer-suicide", function(event)
   end
 end)
 
----@param event table
+---@param event script_raised_destroy|on_entity_destroyed|on_entity_died
 local function on_death(event)
   ---@type integer
   local unit_number = event.unit_number or event.entity.unit_number or error("Unable to get unit_number.")
@@ -453,6 +505,7 @@ script.on_event(defines.events.script_raised_destroy, on_death, filters)
 script.on_event(defines.events.on_entity_destroyed, on_death)
 script.on_event(defines.events.on_entity_died, on_death, filters)
 
+---@param event table
 local function handle_switch_event(event)
   local player_data = players[event.player_index]
   if player_data then
@@ -479,6 +532,7 @@ script.on_event(defines.events.on_player_used_capsule, function(event)
   end
 end)
 
+---@param event on_selected_entity_changed|on_player_cursor_stack_changed
 local function handle_repairing_events(event)
   local player_data = players[event.player_index]
   if player_data and player_data.car then
@@ -496,6 +550,29 @@ script.on_event({
   defines.events.on_cutscene_waypoint_reached,
   defines.events.on_cutscene_cancelled,
 }, handle_switch_event)
+
+script.on_event(defines.events.on_runtime_mod_setting_changed, function(event)
+  if event.setting == "CarEngineer-enable-mod-gui-btn" then
+    local player_data = players[event.player_index]
+    if player_data then
+      update_mod_gui_button(player_data)
+    end
+  end
+end)
+
+script.on_event(defines.events.on_gui_click, function(event)
+  if (not (event.alt or event.control or event.shift))
+    and event.button == defines.mouse_button_type.left
+  then
+    local tags = event.element.tags
+    if tags.__CarEngineer and tags.suicide then
+      local player_data = players[event.player_index]
+      if player_data then
+        suicide(player_data)
+      end
+    end
+  end
+end)
 
 script.on_event(defines.events.on_player_removed, function(event)
   local player_data = players[event.player_index]
