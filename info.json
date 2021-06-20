@@ -6,7 +6,7 @@
   "author": "JanSharp",
   "contact": "https://github.com/JanSharp/CarEngineer/issues",
   "homepage": "https://github.com/JanSharp/CarEngineer",
-  "description": "Factorio mod where you are stuck in a car. Forever.\nYou are the car.",
+  "description": "You are stuck in a car. Forever.\nYou are the car.",
   "dependencies": [
     "base"
   ],
