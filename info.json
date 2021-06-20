@@ -9,5 +9,11 @@
   "description": "???",
   "dependencies": [
     "base"
-  ]
+  ],
+
+  "package": {
+    "ignore": [
+      "*.xcf"
+    ]
+  }
 }
