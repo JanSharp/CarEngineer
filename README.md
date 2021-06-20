@@ -10,7 +10,8 @@
 - Holding repair packs and hovering (selecting) entities will automatically use the repair packs to repair
   (because you can't use repair packs in cars, period)
 - Give the car natural health regen (with a delay just as if you were a character)
+- Suicide button (all kinds of variants. custom-input, shortcut (enabled via a setting), mod gui button (enabled via a setting))
 
 # Todo
-- Suicide button
-  - Randomize respawn location a bit just in case the spawn location it picks actually gets you stuck
+- Randomize respawn location a bit just in case the spawn location it picks actually gets you stuck
+- Suicide of exit setting
