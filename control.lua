@@ -401,6 +401,17 @@ script.on_event(defines.events.on_player_respawned, function(event)
   end
 end)
 
+---@param player_data PlayerData
+local function suicide(player_data)
+  if player_data.car then
+    if player_data.player.controller_type == defines.controllers.character then
+      player_data.car.die(player_data.player.force, player_data.player.character)
+    else
+      player_data.car.die(player_data.player.force)
+    end
+  end
+end
+
 script.on_event(defines.events.on_player_driving_changed_state, function(event)
   local player_data = players[event.player_index]
   if player_data then
@@ -408,6 +419,22 @@ script.on_event(defines.events.on_player_driving_changed_state, function(event)
     if not player.driving then
       get_back_in_there(player_data)
     end
+  end
+end)
+
+script.on_event(defines.events.on_lua_shortcut, function(event)
+  if event.prototype_name == "CarEngineer-suicide" then
+    local player_data = players[event.player_index]
+    if player_data then
+      suicide(player_data)
+    end
+  end
+end)
+
+script.on_event("CarEngineer-suicide", function(event)
+  local player_data = players[event.player_index]
+  if player_data then
+    suicide(player_data)
   end
 end)
 
