@@ -12,4 +12,10 @@ data:extend{
     setting_type = "runtime-per-user",
     default_value = false,
   },
+  {
+    type = "bool-setting",
+    name = "CarEngineer-death-on-exit",
+    setting_type = "runtime-per-user",
+    default_value = false,
+  },
 }

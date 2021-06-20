@@ -469,7 +469,11 @@ script.on_event(defines.events.on_player_driving_changed_state, function(event)
   if player_data then
     local player = player_data.player
     if not player.driving then
-      get_back_in_there(player_data)
+      if settings.get_player_settings(player_data.player)["CarEngineer-death-on-exit"].value then
+        suicide(player_data)
+      else
+        get_back_in_there(player_data)
+      end
     end
   end
 end)
