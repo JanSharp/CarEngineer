@@ -470,7 +470,7 @@ local function suicide(player_data)
     elseif player_data.player.controller_type == defines.controllers.cutscene then
       local character = player_data.player.cutscene_character
       if character then
-        player_data.car.die(player_data.player.force, player_data.player.character)
+        player_data.car.die(player_data.player.force, character)
         return
       end
     end
